@@ -167,3 +167,7 @@ h1, h2, h3 {
   body { background: white; }
   a { color: inherit; }
 }
+
+/* ---------- publications ---------- */
+.me { color: var(--color-ink); font-weight: 600; }
+.venue { font-style: italic; }
