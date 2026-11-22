@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vishisht Choudhary</title>
+<meta name="description" content="Vishisht Choudhary, computer science at the Technical University of Munich. Notes and software on evaluating AI agents and making their decisions calibrated and verifiable.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <a href="./">Vishisht Choudhary</a>
+    <nav><a href="#writing">Writing</a><a href="#research">Research</a><a href="#software">Software</a></nav>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h1>Vishisht Choudhary</h1>
+      <p class="lede">I study computer science at the Technical University of Munich. My work is on AI agents: how to evaluate them honestly, and how to make the decisions they take calibrated and verifiable.</p>
+      <p>This page collects my research notes, papers and open-source software. Code is on <a href="https://github.com/VishiATChoudhary">GitHub</a>.</p>
+    </section>
+
+    <section class="section" id="writing">
+      <h2>Writing</h2>
+      <ul class="entries">
+        <li>
+          <div class="entry-head">
+            <span class="entry-title"><a href="notes/benchmarking-self-evolving-agents.html">Benchmarks expose self-evolving agents’ fragile gains</a></span>
+            <span class="meta">Nov 2026 · 18 min</span>
+          </div>
+          <p class="entry-note">A review of how self-modifying agents are evaluated. Gains hold on recurring workflows but fade under shift, and most headline results come from protocols that cannot separate capability from benchmark fitting.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="section" id="research">
+      <h2>Research</h2>
+      <ul class="entries">
+        <li>
+          <span class="entry-title">Causal thinking for decision making on Electronic Health Records: why and how</span>
+          <p class="entry-note"><a href="https://github.com/VishiATChoudhary/CDSS-Penn">Code</a></p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="section" id="software">
+      <h2>Software</h2>
+      <ul class="entries">
+        <li>
+          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/theorem">theorem</a></span>
+          <p class="entry-note">A graph query and construction language for AI agents. Every query is verified whole before it runs.</p>
+        </li>
+        <li>
+          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/nanojev">nanojev</a></span>
+          <p class="entry-note">Typed, calibrated decisions from a local model, without token generation.</p>
+        </li>
+        <li>
+          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/toolJev">toolJev</a></span>
+          <p class="entry-note">Code Mode for MCP where the sub-model is a calibrated decision model rather than an LLM. Benchmarked on MCPToolBench++, LiveMCPBench, When2Call and live Claude agents.</p>
+        </li>
+        <li>
+          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/graft">graft</a></span>
+          <p class="entry-note">Source control for agent-scale monorepos: server-side changesets, derived data, want-only tiered fetch, lock-free landing.</p>
+        </li>
+        <li>
+          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/distillery">distillery</a></span>
+          <p class="entry-note">An autoresearch-style loop for distilling a large API model into a small one.</p>
+        </li>
+        <li>
+          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/synapse">synapse</a></span>
+          <p class="entry-note">Shared context between coding agents (Claude Code, Codex, Gemini and others) on one canvas.</p>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="colophon meta">
+    <span>Vishisht Choudhary · Munich</span>
+    <a href="https://github.com/VishiATChoudhary">github.com/VishiATChoudhary</a>
+  </footer>
+</div>
+</body>
+</html>

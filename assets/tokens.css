@@ -1,0 +1,44 @@
+/* Hallmark · macrostructure: Long Document · tone: austere academic · anchor hue: oxblood (25)
+ * theme: Specimen-adjacent (light · high-contrast-serif · warm) · nav: N6 masthead · footer: Ft1 colophon
+ */
+:root {
+  /* colour */
+  --color-paper: oklch(98.5% 0.004 85);
+  --color-paper-2: oklch(95.5% 0.006 85);
+  --color-ink: oklch(22% 0.01 60);
+  --color-ink-2: oklch(42% 0.01 60);
+  --color-ink-3: oklch(56% 0.008 60);
+  --color-rule: oklch(86% 0.008 70);
+  --color-accent: oklch(42% 0.13 25);
+  --color-accent-hover: oklch(34% 0.12 25);
+  --color-focus: oklch(50% 0.15 25);
+
+  /* type */
+  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-body: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-meta: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --text-xs: 0.78rem;
+  --text-sm: 0.9rem;
+  --text-base: 1.1875rem;
+  --text-lg: 1.35rem;
+  --text-xl: 1.7rem;
+  --text-display: clamp(2.2rem, 1.6rem + 2.6vw, 3.4rem);
+
+  /* space (4pt) */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+
+  --measure: 38rem;
+  --rule-hair: 1px solid var(--color-rule);
+  --radius-none: 0;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 120ms;
+}
