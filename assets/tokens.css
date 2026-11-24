@@ -1,43 +1,55 @@
-/* Hallmark · macrostructure: Long Document · tone: austere academic · anchor hue: oxblood (25)
- * theme: Specimen-adjacent (light · high-contrast-serif · warm) · nav: N6 masthead · footer: Ft1 colophon
+/* Hallmark · macrostructure: Index List (year-gutter) · tone: quiet scholarly, dark-first · anchor hue: none (neutral)
+ * theme: studied-DNA (source: greene.sh + nathan.rs) · paper oklch(18% 0 0) · ink oklch(91% 0.008 90)
+ * display + body: EB Garamond (with true small caps) · nav: name-left masthead + toggle · footer: one-line colophon
  */
+:root,
+:root[data-theme="dark"] {
+  --color-paper: oklch(18.5% 0.002 90);
+  --color-paper-2: oklch(23% 0.003 90);
+  --color-ink: oklch(91% 0.008 90);
+  --color-ink-2: oklch(78% 0.008 90);
+  --color-ink-3: oklch(62% 0.006 90);
+  --color-rule: oklch(32% 0.004 90);
+  --color-link-line: oklch(52% 0.004 90);
+  --color-focus: oklch(85% 0.06 90);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --color-paper: oklch(97.5% 0.004 95);
+  --color-paper-2: oklch(94% 0.006 95);
+  --color-ink: oklch(25% 0.01 250);
+  --color-ink-2: oklch(38% 0.01 250);
+  --color-ink-3: oklch(52% 0.008 250);
+  --color-rule: oklch(87% 0.006 95);
+  --color-link-line: oklch(68% 0.006 95);
+  --color-focus: oklch(40% 0.08 250);
+  color-scheme: light;
+}
+
 :root {
-  /* colour */
-  --color-paper: oklch(98.5% 0.004 85);
-  --color-paper-2: oklch(95.5% 0.006 85);
-  --color-ink: oklch(22% 0.01 60);
-  --color-ink-2: oklch(42% 0.01 60);
-  --color-ink-3: oklch(56% 0.008 60);
-  --color-rule: oklch(86% 0.008 70);
-  --color-accent: oklch(42% 0.13 25);
-  --color-accent-hover: oklch(34% 0.12 25);
-  --color-focus: oklch(50% 0.15 25);
+  --font-body: "EB Garamond", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-code: ui-monospace, "SF Mono", Menlo, monospace;
 
-  /* type */
-  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
-  --font-body: "Newsreader", "Iowan Old Style", Georgia, serif;
-  --font-meta: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --text-xs: 0.8rem;
+  --text-sm: 0.95rem;
+  --text-base: 1.2rem;
+  --text-lg: 1.4rem;
+  --text-xl: 1.75rem;
+  --text-display: clamp(2rem, 1.6rem + 1.8vw, 2.8rem);
 
-  --text-xs: 0.78rem;
-  --text-sm: 0.9rem;
-  --text-base: 1.1875rem;
-  --text-lg: 1.35rem;
-  --text-xl: 1.7rem;
-  --text-display: clamp(2.2rem, 1.6rem + 2.6vw, 3.4rem);
-
-  /* space (4pt) */
   --space-2xs: 0.25rem;
   --space-xs: 0.5rem;
   --space-sm: 0.75rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2.5rem;
-  --space-2xl: 4rem;
-  --space-3xl: 6rem;
+  --space-2xl: 3.5rem;
+  --space-3xl: 5rem;
 
-  --measure: 38rem;
-  --rule-hair: 1px solid var(--color-rule);
-  --radius-none: 0;
+  --measure: 40rem;
+  --gutter: 3.25rem;
+  --tracking-caps: 0.12em;
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-fast: 120ms;

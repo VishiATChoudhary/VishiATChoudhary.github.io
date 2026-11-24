@@ -1,65 +1,70 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vishisht Choudhary</title>
-<meta name="description" content="Vishisht Choudhary, computer science at the Technical University of Munich. Notes and software on evaluating AI agents and making their decisions calibrated and verifiable.">
+<meta name="description" content="Vishisht Choudhary, computer science at the Technical University of Munich. Papers, notes and software on evaluating AI agents and making their decisions calibrated and verifiable.">
+<script>try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..600;1,400..600&display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<script src="assets/theme.js" defer></script>
 </head>
 <body>
 <div class="page">
   <header class="masthead">
-    <a href="./">Vishisht Choudhary</a>
-    <nav><a href="#writing">Writing</a><a href="#research">Research</a><a href="#software">Software</a></nav>
+    <a class="name caps" href="./">Vishisht Choudhary</a>
+    <nav><a href="#papers">Papers</a><a href="#writing">Writing</a><a href="https://github.com/VishiATChoudhary">GitHub</a></nav>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    </button>
   </header>
 
   <main>
-    <section class="intro">
-      <h1>Vishisht Choudhary</h1>
-      <p class="lede">I study computer science at the Technical University of Munich. My work is on AI agents: how to evaluate them honestly, and how to make the decisions they take calibrated and verifiable.</p>
-      <p>This page collects my research notes, papers and open-source software. Code is on <a href="https://github.com/VishiATChoudhary">GitHub</a>.</p>
+    <section class="section about" id="about">
+      <h2>About</h2>
+      <p>I study computer science at the Technical University of Munich. My work is on AI agents: how to evaluate them honestly, and how to make the decisions they take calibrated and verifiable.</p>
+    </section>
+
+    <section class="section" id="papers">
+      <h2>Papers</h2>
+      <ul class="entries">
+        <li>
+          <span class="year">2026</span>
+          <div class="body">
+            <a class="entry-title" href="https://arxiv.org/abs/2610.17719">Keep Your Receipts: Trustworthy Cleanup of Agent-Built Knowledge Graphs</a>
+            <p class="entry-note"><span class="me">Vishisht Choudhary</span>. <span class="venue">NeurIPS 2026 Workshop: Who Verifies the Agents? Toward Reliable Agent Development</span>.</p>
+          </div>
+        </li>
+        <li>
+          <span class="year"></span>
+          <div class="body">
+            <a class="entry-title" href="https://arxiv.org/abs/2607.26935">What Does It Take to Detect an AI Agent? Minimal Feature Sets for Behavioral Detection under Browser Automation</a>
+            <p class="entry-note"><span class="me">Vishisht Choudhary</span>, Lukas Schmidt, Anne Zoë Kenntner, Feras Skhab, Michel Osswald, Jens Ernstberger. <span class="venue"><a href="https://ne-agents-day.github.io/">North East AI Agents Day 2026</a> workshop, New York City</span>.</p>
+          </div>
+        </li>
+        <li>
+          <span class="year"></span>
+          <div class="body">
+            <a class="entry-title" href="https://arxiv.org/abs/2607.04353">HASSL: Hierarchy-Aware Self-Supervised Learning Framework for Single Cell Microscopy</a>
+            <p class="entry-note">Julius Riel, V. Singh, Sai Anirudh Aryasomayajula, Anuun Chinbat, Hannes Leonhard, Moritz Ladenburger, Frederik Alexander, <span class="me">Vishisht Choudhary</span>, F. Laredo, G. Masserdotti, Thorben Prein, C. Marr, Amirhossein Kardoost. <span class="venue">European Conference on Computer Vision (ECCV)</span>.</p>
+          </div>
+        </li>
+      </ul>
     </section>
 
     <section class="section" id="writing">
       <h2>Writing</h2>
       <ul class="entries">
         <li>
-          <div class="entry-head">
-            <span class="entry-title"><a href="notes/benchmarking-self-evolving-agents.html">Benchmarks expose self-evolving agents’ fragile gains</a></span>
-            <span class="meta">Nov 2026 · 18 min</span>
+          <span class="year">2026</span>
+          <div class="body">
+            <a class="entry-title" href="notes/benchmarking-self-evolving-agents.html">Benchmarks expose self-evolving agents’ fragile gains</a>
+            <p class="entry-note">How self-modifying agents are evaluated. Gains hold on recurring workflows but fade under shift, and most headline results come from protocols that cannot separate capability from benchmark fitting.</p>
           </div>
-          <p class="entry-note">A review of how self-modifying agents are evaluated. Gains hold on recurring workflows but fade under shift, and most headline results come from protocols that cannot separate capability from benchmark fitting.</p>
-        </li>
-      </ul>
-    </section>
-
-    <section class="section" id="research">
-      <h2>Research</h2>
-      <ul class="entries">
-        <li>
-          <div class="entry-head">
-            <span class="entry-title"><a href="https://arxiv.org/abs/2610.17719">Keep Your Receipts: Trustworthy Cleanup of Agent-Built Knowledge Graphs</a></span>
-            <span class="meta">2026</span>
-          </div>
-          <p class="entry-note"><span class="me">Vishisht Choudhary</span>. <span class="venue">NeurIPS 2026 Workshop: Who Verifies the Agents? Toward Reliable Agent Development</span>.</p>
-        </li>
-        <li>
-          <div class="entry-head">
-            <span class="entry-title"><a href="https://arxiv.org/abs/2607.26935">What Does It Take to Detect an AI Agent? Minimal Feature Sets for Behavioral Detection under Browser Automation</a></span>
-            <span class="meta">2026</span>
-          </div>
-          <p class="entry-note"><span class="me">Vishisht Choudhary</span>, Lukas Schmidt, Anne Zoë Kenntner, Feras Skhab, Michel Osswald, Jens Ernstberger. <span class="venue"><a href="https://ne-agents-day.github.io/">North East AI Agents Day 2026</a> workshop, New York City</span>.</p>
-        </li>
-        <li>
-          <div class="entry-head">
-            <span class="entry-title"><a href="https://arxiv.org/abs/2607.04353">HASSL: Hierarchy-Aware Self-Supervised Learning Framework for Single Cell Microscopy</a></span>
-            <span class="meta">2026</span>
-          </div>
-          <p class="entry-note">Julius Riel, V. Singh, Sai Anirudh Aryasomayajula, Anuun Chinbat, Hannes Leonhard, Moritz Ladenburger, Frederik Alexander, <span class="me">Vishisht Choudhary</span>, F. Laredo, G. Masserdotti, Thorben Prein, C. Marr, Amirhossein Kardoost. <span class="venue">European Conference on Computer Vision (ECCV)</span>.</p>
         </li>
       </ul>
     </section>
@@ -67,36 +72,18 @@
     <section class="section" id="software">
       <h2>Software</h2>
       <ul class="entries">
-        <li>
-          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/theorem">theorem</a></span>
-          <p class="entry-note">A graph query and construction language for AI agents. Every query is verified whole before it runs.</p>
-        </li>
-        <li>
-          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/nanojev">nanojev</a></span>
-          <p class="entry-note">Typed, calibrated decisions from a local model, without token generation.</p>
-        </li>
-        <li>
-          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/toolJev">toolJev</a></span>
-          <p class="entry-note">Code Mode for MCP where the sub-model is a calibrated decision model rather than an LLM. Benchmarked on MCPToolBench++, LiveMCPBench, When2Call and live Claude agents.</p>
-        </li>
-        <li>
-          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/graft">graft</a></span>
-          <p class="entry-note">Source control for agent-scale monorepos: server-side changesets, derived data, want-only tiered fetch, lock-free landing.</p>
-        </li>
-        <li>
-          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/distillery">distillery</a></span>
-          <p class="entry-note">An autoresearch-style loop for distilling a large API model into a small one.</p>
-        </li>
-        <li>
-          <span class="entry-title"><a href="https://github.com/VishiATChoudhary/synapse">synapse</a></span>
-          <p class="entry-note">Shared context between coding agents (Claude Code, Codex, Gemini and others) on one canvas.</p>
-        </li>
+        <li><span class="year"></span><div class="body"><a class="entry-title" href="https://github.com/VishiATChoudhary/theorem">theorem</a><p class="entry-note">A graph query and construction language for AI agents. Every query is verified whole before it runs.</p></div></li>
+        <li><span class="year"></span><div class="body"><a class="entry-title" href="https://github.com/VishiATChoudhary/nanojev">nanojev</a><p class="entry-note">Typed, calibrated decisions from a local model, without token generation.</p></div></li>
+        <li><span class="year"></span><div class="body"><a class="entry-title" href="https://github.com/VishiATChoudhary/toolJev">toolJev</a><p class="entry-note">Code Mode for MCP where the sub-model is a calibrated decision model rather than an LLM. Benchmarked on MCPToolBench++, LiveMCPBench, When2Call and live Claude agents.</p></div></li>
+        <li><span class="year"></span><div class="body"><a class="entry-title" href="https://github.com/VishiATChoudhary/graft">graft</a><p class="entry-note">Source control for agent-scale monorepos: server-side changesets, derived data, want-only tiered fetch, lock-free landing.</p></div></li>
+        <li><span class="year"></span><div class="body"><a class="entry-title" href="https://github.com/VishiATChoudhary/distillery">distillery</a><p class="entry-note">An autoresearch-style loop for distilling a large API model into a small one.</p></div></li>
+        <li><span class="year"></span><div class="body"><a class="entry-title" href="https://github.com/VishiATChoudhary/synapse">synapse</a><p class="entry-note">Shared context between coding agents (Claude Code, Codex, Gemini and others) on one canvas.</p></div></li>
       </ul>
     </section>
   </main>
 
-  <footer class="colophon meta">
-    <span>Vishisht Choudhary · Munich</span>
+  <footer class="colophon">
+    <span>Munich</span>
     <a href="https://github.com/VishiATChoudhary">github.com/VishiATChoudhary</a>
   </footer>
 </div>
