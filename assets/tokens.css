@@ -12,6 +12,8 @@
   --color-rule: oklch(32% 0.004 90);
   --color-link-line: oklch(52% 0.004 90);
   --color-focus: oklch(85% 0.06 90);
+  --color-accent: oklch(79% 0.12 72);
+  --color-accent-soft: oklch(79% 0.12 72 / 0.22);
   color-scheme: dark;
 }
 
@@ -24,6 +26,8 @@
   --color-rule: oklch(87% 0.006 95);
   --color-link-line: oklch(68% 0.006 95);
   --color-focus: oklch(40% 0.08 250);
+  --color-accent: oklch(55% 0.14 45);
+  --color-accent-soft: oklch(55% 0.14 45 / 0.18);
   color-scheme: light;
 }
 

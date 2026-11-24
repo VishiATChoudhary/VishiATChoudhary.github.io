@@ -10,7 +10,7 @@ for src in reports/*.md; do
   name=$(basename "$src" .md)
   slug=$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g')
   title=$(grep -m1 '^# ' "$src" | sed "s/^# //; s/'/’/g")
-  words=$(wc -w < "$src")
+  words=$(grep -v '<figure' "$src" | sed 's/<[^>]*>//g' | wc -w)
   readtime=$(( (words + 229) / 230 ))
   date=$(date -r "$src" '+%B %Y')
 
