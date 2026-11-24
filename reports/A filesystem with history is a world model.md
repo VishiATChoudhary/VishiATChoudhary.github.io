@@ -4,15 +4,13 @@ The world is one big filesystem.
 
 On my Mac, everything I know and every program I use hangs somewhere off one tree. The internet is the same idea at a larger scale. Every page has a path, just with worse folder names.
 
-A tree that big is only useful if you can find things in it, and for the web that is what Google worked out. PageRank looked at who links to whom, later versions also looked at what people clicked, and from all of that Google produced an order.
+Coding agents work in that tree as well. They list a directory, read a few files, change one and run the tests, and for a lot of work that is all they need. A large part of agent research, meanwhile, is about giving agents a world model: some picture of how things are, how they got that way, and what would happen if something changed.
 
-When I search for something, millions of other people have already done the ranking for me and I only read the results. An agent working in a folder has nothing comparable. It runs grep, gets back forty matches in no particular order, and then has to work out on its own which of them matter, so in effect the agent has to be its own Google.
-
-My claim in this post is that a folder gets you further than it looks. Together with its git history it is already most of what people call a world model: it holds what is true now and what was true before, and it lets you try things and take them back. What it does not have is any kind of ranking.
+I think a folder under version control is already most of that. The files say what is true now. The git history says what was true before and who changed it. A branch lets you try something and take it back, and a program checked in next to the data can tell you what happens next. I tested this on real GitHub projects, and then on a simulated city and a simulated forest that I stored as git repositories.
 
 ## Storage
 
-The usual answer to the finding problem has been more storage. A vector database embeds every chunk of text so that passages can be found by meaning. A knowledge graph pulls out entities and relations. A memory service sits in front of both and decides what to keep. All three are second copies of information that already lives somewhere else, and somebody has to keep the copy in sync with the original.
+The usual way to give an agent memory has been more storage. A vector database embeds every chunk of text so that passages can be found by meaning. A knowledge graph pulls out entities and relations. A memory service sits in front of both and decides what to keep. All three are second copies of information that already lives somewhere else, and somebody has to keep the copy in sync with the original.
 
 The agents that people actually get work out of are much plainer than that. A coding agent sits in a directory and lists, reads, searches and edits. It has no index and no graph.
 
@@ -89,9 +87,11 @@ With read-only access to git, every agent went from somewhere between 52 and 66%
 
 ## Focus
 
-Google did not stop at links. It also recorded what people did with the results: which ones they clicked, and which ones they came straight back from to try another.
+A tree is only useful if you can find things in it, and for the web that is what Google worked out. PageRank looked at who links to whom. Later versions also looked at what people did with the results: which ones they clicked, and which ones they came straight back from to try another. From all of that Google produced an order.
 
-An agent run leaves similar records, namely which files it opened and which ones ended up in its answer. To see whether those records can rank a filesystem, I built three recommenders that sit outside the agent. Each reads the task, ranks the repository's files, and puts its top five into the prompt before the agent starts, the way a search engine shows you results before you click.
+When I search for something, millions of other people have already done the ranking for me and I only read the results. An agent working in a folder has nothing comparable. It runs grep, gets back forty matches in no particular order, and then has to work out on its own which of them matter, so in effect the agent has to be its own Google.
+
+An agent run does leave records much like those clicks, namely which files it opened and which ones ended up in its answer. To see whether those records can rank a filesystem, I built three recommenders that sit outside the agent. Each reads the task, ranks the repository's files, and puts its top five into the prompt before the agent starts, the way a search engine shows you results before you click.
 
 | Recommender | How it ranks | Effect on accuracy |
 |---|---|---|

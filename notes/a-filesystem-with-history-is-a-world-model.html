@@ -53,24 +53,21 @@ id="toc-what-agents-actually-use">What Agents Actually Use</a></li>
 <p>On my Mac, everything I know and every program I use hangs somewhere
 off one tree. The internet is the same idea at a larger scale. Every
 page has a path, just with worse folder names.</p>
-<p>A tree that big is only useful if you can find things in it, and for
-the web that is what Google worked out. PageRank looked at who links to
-whom, later versions also looked at what people clicked, and from all of
-that Google produced an order.</p>
-<p>When I search for something, millions of other people have already
-done the ranking for me and I only read the results. An agent working in
-a folder has nothing comparable. It runs grep, gets back forty matches
-in no particular order, and then has to work out on its own which of
-them matter, so in effect the agent has to be its own Google.</p>
-<p>My claim in this post is that a folder gets you further than it
-looks. Together with its git history it is already most of what people
-call a world model: it holds what is true now and what was true before,
-and it lets you try things and take them back. What it does not have is
-any kind of ranking.</p>
+<p>Coding agents work in that tree as well. They list a directory, read
+a few files, change one and run the tests, and for a lot of work that is
+all they need. A large part of agent research, meanwhile, is about
+giving agents a world model: some picture of how things are, how they
+got that way, and what would happen if something changed.</p>
+<p>I think a folder under version control is already most of that. The
+files say what is true now. The git history says what was true before
+and who changed it. A branch lets you try something and take it back,
+and a program checked in next to the data can tell you what happens
+next. I tested this on real GitHub projects, and then on a simulated
+city and a simulated forest that I stored as git repositories.</p>
 <h2 id="storage">Storage</h2>
-<p>The usual answer to the finding problem has been more storage. A
-vector database embeds every chunk of text so that passages can be found
-by meaning. A knowledge graph pulls out entities and relations. A memory
+<p>The usual way to give an agent memory has been more storage. A vector
+database embeds every chunk of text so that passages can be found by
+meaning. A knowledge graph pulls out entities and relations. A memory
 service sits in front of both and decides what to keep. All three are
 second copies of information that already lives somewhere else, and
 somebody has to keep the copy in sync with the original.</p>
@@ -228,15 +225,22 @@ clues in the current files.</p>
 <figure class="fsfig" role="group" aria-label="Questions about past values"><p class="fsfig-title">Questions about past values</p><p class="fsfig-sub">100 questions about past states of real code from 14 Python projects. Share answered exactly right.</p><p class="fsfig-legend"><span><i class="sw base"></i>grep only (sees today)</span><span><i class="sw key"></i>grep + read-only git history</span></p><svg class="fschart" viewBox="0 0 640 282" role="img" aria-label="Questions about past values"><line class="grid" x1="150.0" x2="150.0" y1="20" y2="238"/><text class="tick" x="150.0" y="258" text-anchor="middle">40%</text><line class="grid" x1="290.0" x2="290.0" y1="20" y2="238"/><text class="tick" x="290.0" y="258" text-anchor="middle">60%</text><line class="grid" x1="430.0" x2="430.0" y1="20" y2="238"/><text class="tick" x="430.0" y="258" text-anchor="middle">80%</text><line class="grid" x1="570.0" x2="570.0" y1="20" y2="238"/><text class="tick" x="570.0" y="258" text-anchor="middle">100%</text><g class="row"><title>Claude Haiku: 58% without git, 98% with git (+40 points, 95% CI +30 to +49). Gave today&#x27;s value instead: 35% without git, 2% with git.</title><text class="lab" x="0" y="57">Claude Haiku</text><line class="link grow-x" x1="276.0" x2="556.0" y1="52" y2="52" style="transform-origin:276.0px 52px"/><circle class="dot base" cx="276.0" cy="52" r="6"/><circle class="dot key" cx="556.0" cy="52" r="7"/><text class="val" x="264.0" y="57" text-anchor="end">58%</text><text class="val key" x="569.0" y="57">98%</text><text class="delta" x="416.0" y="38" text-anchor="middle">+40 points</text><text class="aside" x="416.0" y="80" text-anchor="middle">gave today's value instead: 35% → 2%</text></g><g class="row"><title>Claude Sonnet: 66% without git, 100% with git (+34 points, 95% CI +25 to +43). Gave today&#x27;s value instead: 30% without git, 0% with git.</title><text class="lab" x="0" y="131">Claude Sonnet</text><line class="link grow-x" x1="332.0" x2="570.0" y1="126" y2="126" style="transform-origin:332.0px 126px"/><circle class="dot base" cx="332.0" cy="126" r="6"/><circle class="dot key" cx="570.0" cy="126" r="7"/><text class="val" x="320.0" y="131" text-anchor="end">66%</text><text class="val key" x="583.0" y="131">100%</text><text class="delta" x="451.0" y="112" text-anchor="middle">+34 points</text><text class="aside" x="451.0" y="154" text-anchor="middle">gave today's value instead: 30% → 0%</text></g><g class="row"><title>Codex: 52% without git, 92% with git (+40 points, 95% CI +28 to +51). Gave today&#x27;s value instead: 46% without git, 8% with git.</title><text class="lab" x="0" y="205">Codex</text><line class="link grow-x" x1="234.0" x2="514.0" y1="200" y2="200" style="transform-origin:234.0px 200px"/><circle class="dot base" cx="234.0" cy="200" r="6"/><circle class="dot key" cx="514.0" cy="200" r="7"/><text class="val" x="222.0" y="205" text-anchor="end">52%</text><text class="val key" x="527.0" y="205">92%</text><text class="delta" x="374.0" y="186" text-anchor="middle">+40 points</text><text class="aside" x="374.0" y="228" text-anchor="middle">gave today's value instead: 46% → 8%</text></g></svg></figure>
 <!-- /fig:past -->
 <h2 id="focus">Focus</h2>
-<p>Google did not stop at links. It also recorded what people did with
-the results: which ones they clicked, and which ones they came straight
-back from to try another.</p>
-<p>An agent run leaves similar records, namely which files it opened and
-which ones ended up in its answer. To see whether those records can rank
-a filesystem, I built three recommenders that sit outside the agent.
-Each reads the task, ranks the repository’s files, and puts its top five
-into the prompt before the agent starts, the way a search engine shows
-you results before you click.</p>
+<p>A tree is only useful if you can find things in it, and for the web
+that is what Google worked out. PageRank looked at who links to whom.
+Later versions also looked at what people did with the results: which
+ones they clicked, and which ones they came straight back from to try
+another. From all of that Google produced an order.</p>
+<p>When I search for something, millions of other people have already
+done the ranking for me and I only read the results. An agent working in
+a folder has nothing comparable. It runs grep, gets back forty matches
+in no particular order, and then has to work out on its own which of
+them matter, so in effect the agent has to be its own Google.</p>
+<p>An agent run does leave records much like those clicks, namely which
+files it opened and which ones ended up in its answer. To see whether
+those records can rank a filesystem, I built three recommenders that sit
+outside the agent. Each reads the task, ranks the repository’s files,
+and puts its top five into the prompt before the agent starts, the way a
+search engine shows you results before you click.</p>
 <table>
 <colgroup>
 <col style="width: 33%" />
