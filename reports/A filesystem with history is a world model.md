@@ -1,5 +1,11 @@
 # A filesystem with history is a world model
 
+**TL;DR.** The operations that make up a world model are to observe a state, update it, remember earlier states, predict what follows, and try something and undo it. Each of them has a plain counterpart in a folder under version control: read the files, commit a change, look through the git history, run a program stored next to the data, make a branch and throw it away. My proposal is that data environments for agents should be built this way, with the state written to files, every change committed, and the simulator and the procedures kept in the same folder.
+
+I tested the idea on real GitHub projects and on two simulated worlds, a city and a forest, stored as git repositories. Read-only access to git raised accuracy on questions about the past from between 52 and 66% to between 92 and 100%. Files that earlier agents had used on the same problem added 4 to 10 points. When the simulator disagreed with the world, a calibration procedure written into the folder raised forecasting accuracy from 2% to 31%. A simulator with the correct parameters gets 94%, so agents are still far from calibrating a model well on their own, and I have only tried this on worlds I wrote myself.
+
+---
+
 The world is one big filesystem.
 
 On my Mac, everything I know and every program I use hangs somewhere off one tree. The internet is the same idea at a larger scale. Every page has a path, just with worse folder names.
