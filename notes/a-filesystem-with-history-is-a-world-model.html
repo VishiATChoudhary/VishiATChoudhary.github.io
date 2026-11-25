@@ -408,11 +408,66 @@ the history is written by every commit and needs nothing else. The
 memory stores needed a pipeline of their own: a language model call to
 extract facts from every record, an embedding model, a vector database,
 and a search command for the agent. The agent with git also spent less
-per question, $0.068 and 75,000 input tokens on average, against $0.107
-and 120,000 for the vector store and $0.119 and 121,000 for mem0,
-because it read the commits it needed instead of the whole store. For a
-world kept in a folder, an agent does not need a separate memory
-system.</p>
+per question, because it read the commits it needed instead of the whole
+store.</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>Git history</th>
+<th>Vector store</th>
+<th>mem0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Correct, 207 questions</td>
+<td>207</td>
+<td>207</td>
+<td>207</td>
+</tr>
+<tr>
+<td>Written by</td>
+<td>every commit</td>
+<td>an ingest pipeline</td>
+<td>an ingest pipeline</td>
+</tr>
+<tr>
+<td>Extra services</td>
+<td>none</td>
+<td>embedding model, vector database</td>
+<td>language model for fact extraction, embedding model, vector
+database</td>
+</tr>
+<tr>
+<td>How the agent reads it</td>
+<td><code>git log</code>, <code>git show</code></td>
+<td><code>./memory search</code> or <code>all</code></td>
+<td><code>./memory search</code> or <code>all</code></td>
+</tr>
+<tr>
+<td>Cost per question*</td>
+<td>$0.068</td>
+<td>$0.107</td>
+<td>$0.119</td>
+</tr>
+<tr>
+<td>Input tokens per question*</td>
+<td>75,000</td>
+<td>120,000</td>
+<td>121,000</td>
+</tr>
+</tbody>
+</table>
+<p>*Averages over the 137 harder questions, Claude Opus 5.5.</p>
+<p>For a world kept in a folder, an agent does not need a separate
+memory system.</p>
 <h2 id="what-agents-actually-use">What agents actually use</h2>
 <p>With gpt-5-mini, the agents acted on what was placed in front of them
 and left alone what was only available: a backtest command that was run

@@ -125,7 +125,20 @@ Git is not the only way to keep a history. To compare it with memory systems bui
 
 All three answered all 70 correctly, so I wrote 137 harder questions for the same worlds: which value a policy had during a past step, in how many steps of a 20-step window a quantity went up, at which step of a window it peaked, and what a quantity would be today had a past decision not been made. The last kind needs the exact state at the time of the decision, fed into the simulator. All three conditions had the simulator, and the memory conditions also had `./memory all`, which lists every entry the way mem0's own API does. Git, the vector store and mem0 again answered every question correctly. The agents with a memory store listed all of it in every run, and since each world has 67 steps, it fit in context. mem0 had stored the full state of each step together with the step number, so the agent could rebuild the files from text and run the simulator from them.
 
-Accuracy therefore does not decide between them, and the cost of getting there does. When the state of a world is kept as files in git, the history is written by every commit and needs nothing else. The memory stores needed a pipeline of their own: a language model call to extract facts from every record, an embedding model, a vector database, and a search command for the agent. The agent with git also spent less per question, $0.068 and 75,000 input tokens on average, against $0.107 and 120,000 for the vector store and $0.119 and 121,000 for mem0, because it read the commits it needed instead of the whole store. For a world kept in a folder, an agent does not need a separate memory system.
+Accuracy therefore does not decide between them, and the cost of getting there does. When the state of a world is kept as files in git, the history is written by every commit and needs nothing else. The memory stores needed a pipeline of their own: a language model call to extract facts from every record, an embedding model, a vector database, and a search command for the agent. The agent with git also spent less per question, because it read the commits it needed instead of the whole store.
+
+| | Git history | Vector store | mem0 |
+|---|---|---|---|
+| Correct, 207 questions | 207 | 207 | 207 |
+| Written by | every commit | an ingest pipeline | an ingest pipeline |
+| Extra services | none | embedding model, vector database | language model for fact extraction, embedding model, vector database |
+| How the agent reads it | `git log`, `git show` | `./memory search` or `all` | `./memory search` or `all` |
+| Cost per question* | $0.068 | $0.107 | $0.119 |
+| Input tokens per question* | 75,000 | 120,000 | 121,000 |
+
+\*Averages over the 137 harder questions, Claude Opus 5.5.
+
+For a world kept in a folder, an agent does not need a separate memory system.
 
 ## What agents actually use
 
