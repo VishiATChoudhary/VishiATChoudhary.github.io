@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..600;1,400..600&display=swap">
-<link rel="stylesheet" href="../assets/site.css?v=4">
+<link rel="stylesheet" href="../assets/site.css?v=5">
 <script src="../assets/theme.js" defer></script>
 </head>
 <body>
@@ -28,6 +28,14 @@
       <h1>$title$</h1>
       <div class="meta">$date$ · $readtime$ min read</div>
     </header>
+$if(hero)$
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300&display=swap">
+    <figure class="hero">
+      <canvas class="skyline" role="img" aria-label="$hero-alt$"></canvas>
+      <figcaption>$hero$</figcaption>
+    </figure>
+    <script src="../assets/skyline.js" defer></script>
+$endif$
 $if(toc)$
     <nav class="toc" aria-label="Contents">
       <p class="toc-label">Contents</p>

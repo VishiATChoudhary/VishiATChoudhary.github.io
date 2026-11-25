@@ -1,4 +1,8 @@
 # A filesystem with history is a world model
+---
+hero: "Each folder is fed by the part of the world it describes."
+hero-alt: "A file tree on the left. On the right an ASCII skyline of a weather mast, a town hall, a forest, a power plant, a reservoir and a city whose windows light up and go dark. Dots of data flow from each place back into its folder."
+---
 
 **TL;DR.** The operations that make up a world model are to observe a state, update it, remember earlier states, predict what follows, and try something and undo it. Each of them has a plain counterpart in a folder under version control: read the files, commit a change, look through the git history, run a program stored next to the data, make a branch and throw it away. My proposal is that data environments for agents should be built this way, with the state written to files, every change committed, and the simulator and the procedures kept in the same folder.
 
