@@ -4,9 +4,7 @@ hero: "Each folder is fed by the part of the world it describes."
 hero-alt: "A file tree on the left. On the right an ASCII skyline of a weather mast, a town hall, a forest, a power plant, a reservoir and a city whose windows light up and go dark. Dots of data flow from each place back into its folder."
 ---
 
-**TL;DR.** The operations that make up a world model are to observe a state, update it, remember earlier states, predict what follows, and try something and undo it. Each of them has a plain counterpart in a folder under version control: read the files, commit a change, look through the git history, run a program stored next to the data, make a branch and throw it away. My proposal is that data environments for agents should be built this way, with the state written to files, every change committed, and the simulator and the procedures kept in the same folder.
-
-I tested the idea on real GitHub projects and on two simulated worlds, a city and a forest, stored as git repositories. Read-only access to git raised accuracy on questions about the past from between 52 and 66% to between 92 and 100%. Files that earlier agents had used on the same problem added 4 to 10 points. When the simulator disagreed with the world, a calibration procedure written into the folder raised forecasting accuracy from 2% to 31%. A simulator with the correct parameters gets 94%, so agents are still far from calibrating a model well on their own, and I have only tried this on worlds I wrote myself.
+**TL;DR.** If most of the world can be written down as files, then a folder under version control can serve as a world model: the files hold the current state, the commits hold every earlier state and every decision, and a simulator stored beside the data predicts what comes next. I test this on simulated cities and forests stored as git repositories and on eight real California reservoirs. When the shipped simulator was slightly wrong, frontier agents (Claude Opus 5.5 and gpt-6.2-sol) replayed it against the recorded history, corrected its parameters and forecast as well as a simulator with the true parameters; given only the history, Opus wrote and fitted a simulator of its own. A smaller model got much less out of the same folders. On the real reservoirs the agent beat simple forecasts, but the history and the simulator did not measurably improve it. Git history also did the job of an agent memory system: it answered questions about the past as well as a vector store and mem0, with no extra service and at lower cost. This suggests that a folder can hold what a twin needs, and that how much an agent gets out of it depends mostly on the model.
 
 ---
 
@@ -14,138 +12,68 @@ The world is one big filesystem.
 
 On my Mac, everything I know and every program I use hangs somewhere off one tree. The internet is the same idea at a larger scale. Every page has a path, just with worse folder names.
 
-Coding agents work in that tree as well. They list a directory, read a few files, change one and run the tests, and for a lot of work that is all they need. A large part of agent research, meanwhile, is about giving agents a world model: some picture of how things are, how they got that way, and what would happen if something changed.
+Coding agents already work well in one part of that tree, the code repository. They list a directory, read files, make a change, run the tests and read the history when something breaks, so a repository is a small world that they can observe, remember, change and undo. Most physical systems are not stored this way. A power plant's readings sit in a time-series database, the weather comes from an API, decisions about the plant are recorded in emails and meeting notes, and a model of the plant, where one exists, runs somewhere else. I wanted to know what happens when all of this is put into one folder under version control, and whether an agent can then work with the plant the way it works with a codebase.
 
-I think a folder under version control is already most of that. The files say what is true now. The git history says what was true before and who changed it. A branch lets you try something and take it back, and a program checked in next to the data can tell you what happens next. I tested this on real GitHub projects, and then on a simulated city and a simulated forest that I stored as git repositories.
+## A city in a folder
 
-## Storage
+To test this I built small simulated worlds and stored each one as a git repository. Below is one of them, a city called Riverton with five districts, a reservoir, a power plant with a battery, and a council that sets policy.
 
-The usual way to give an agent memory has been more storage. A vector database embeds every chunk of text so that passages can be found by meaning. A knowledge graph pulls out entities and relations. A memory service sits in front of both and decides what to keep. All three are second copies of information that already lives somewhere else, and somebody has to keep the copy in sync with the original.
+```
+riverton/
+├── RULES.md            what every file means
+├── policies.json       the council's decisions
+├── weather.csv         observed, then forecast
+├── state/
+│   ├── clock.json
+│   ├── reservoir.json  level, capacity
+│   ├── grid.json       battery charge
+│   └── districts/
+│       ├── north.json  population, water, mood
+│       └── ...
+├── model/params.json   the simulator's settings
+└── sim                 ./sim step · backtest
+```
 
-The agents that people actually get work out of are much plainer than that. A coding agent sits in a directory and lists, reads, searches and edits. It has no index and no graph.
+Each simulated week is one commit, and each decision is a separate commit whose message records what changed and why. These are the actual messages from this folder:
 
-That does not mean a plain folder is enough. Grep works great when the folders are well organised, because then the folder names do the ranking. Which is a bit like saying a library works great when someone has already put the right book on the front desk.
+```
+$ git log --oneline | head -3
+81ce526 step 60
+2269680 step 59
+4c413e5 step 58
+
+$ git log --format=%s | grep -v '^step'
+policy: rationing set to level 3 in every district (drought emergency order)
+policy: rationing in east set to level 2 (council vote)
+policy: power priority order changed to west, center, south, east, north
+event: plant output changed to 119.9 (maintenance schedule)
+policy: desalination plant switched on
+```
+
+The folder contains nothing beyond JSON files, one CSV file, a short Python simulator and git.
 
 ## World Models
 
-A **world model** is a picture of the world that is good enough to plan with. You know a glass pushed off the table will fall. You know your keys were in your jacket this morning. You can guess how the day goes if you take the bike instead of the train, without having to try it.
+A **world model** is what lets you plan without trying things first. You know a glass pushed off the table will fall. You know your keys were in your jacket this morning. You can guess how the day goes if you take the bike instead of the train.
 
-In machine learning the term goes back, in its current sense, to Ha and Schmidhuber's 2018 paper *World Models*, where an agent learned a compressed version of a racing game and then practised inside its own simulation of it. The word has been stretched a lot since, but the core has stayed the same: a state of the world, plus rules for how the state changes.
+In machine learning the term in its current sense goes back to Ha and Schmidhuber's 2018 paper *World Models*, in which an agent learned a compressed model of a racing game and then practised inside it. The meaning has widened since, but it still comes down to a state of the world and rules for how that state changes, which in practice means being able to observe the state, update it, recall earlier states, predict the effect of an action, and try an action without committing to it. In the Riverton folder each of these operations corresponds to a command that coding agents already use:
 
-Spelled out as operations, a state with rules for change has to support five things:
-
-- **Observe:** turn what is out there into a state.
-- **Update:** change the state when something happens.
-- **Remember:** recover what the state was earlier, and when it changed.
-- **Predict:** estimate what follows from an action.
-- **Imagine:** try an action without committing to it, and drop it if it was a bad idea.
-
-I am adding a sixth, **Focus:** decide which parts of the state matter right now. The usual definitions leave it out, because a racing game is small enough to take in whole.
-
-## The Filesystem as a World Model
-
-Take an ordinary directory under version control and go down that list. Almost every operation already has a command.
-
-| World model | Filesystem | What it looks like |
+| World model | In the folder | Example |
 |---|---|---|
-| State | The file tree | Everything that is true right now, as files |
-| Observe | `ls`, `cat`, `grep` | Look around, read, search |
-| Update | Write a file, `git commit` | A change is made and recorded |
-| Remember | `git log`, `git show`, `git blame` | What a file said in July, who changed it, and why |
-| Imagine | `git branch`, `git worktree` | A second version of the world that leaves the first alone |
-| Undo | `git revert`, `git checkout` | Go back to an earlier state |
-| Predict | Run the tests, the code, a simulator | What happens if this changes |
-| Focus | (nothing) | Grep returns every match, in no particular order |
+| State | `state/`, `policies.json` | The reservoir's current level |
+| Observe | `cat`, `ls`, `grep` | Read the districts' satisfaction |
+| Update | write a file, `git commit` | A new week of readings arrives |
+| Remember | `git log`, `git show` | What the reservoir held before the drought order |
+| Predict | `./sim step 20` | Where the reservoir will be in 20 weeks |
+| Imagine | `git branch`, `git worktree` | A copy of the city without the rationing order |
+| Undo | `git checkout`, `git revert` | Drop the copy and go back |
+| Calibrate | `./sim backtest`, `model/params.json` | Replay the past and compare it with what was measured |
 
-The mapping has limits. A directory does not learn anything by itself; the agent does the thinking, and the folder holds the state it thinks about along with a full record of how that state came to be. Still, that is more than most memory layers offer, and both people and agents can read it.
+The last row matters most for a real asset, because a simulator of a real plant never matches the plant exactly.
 
-## Method
+## A perfect twin
 
-Code is the one kind of world that already lives in a filesystem, so I started there, with three benchmarks built from public GitHub data:
-
-- **Fresh issues.** 260 issues from 26 large open source projects in Python, Rust, Go and TypeScript, all opened after the models' training cutoff so that nothing could be memorized. The agent has to name the file that needs to change, and the answer is the file the real fix changed.
-- **The past.** 100 questions mined from real git history, such as "as of March 2025, what was the default value of this parameter?". The answer is read from the code as it was on that date and always differs from today's value.
-- **Duplicates.** 204 issues that maintainers closed as duplicates of an earlier report: the same problem, described twice by different people.
-
-Three agents ran them: Claude Code with Claude Haiku 5.5 and Claude Sonnet 5.5, and Codex with gpt-5-mini. Each run got a fresh sandbox, 4,076 runs in total. Answers are checked by code, never by another model, and the only thing that changed between conditions was how the agent could find things.
-
-This is the second version of the benchmark. The first used a fictional company whose documents, questions and grading all came from the same family of models that was being tested. The results looked great and I did not believe them, so I threw it out.
-
-## Observe
-
-On the fresh issues, plain grep found the right file 82% of the time. A semantic search tool made it 83%. Pushing the five most similar files into the prompt made it 84%, and hints from the commit history left it at 82%. I cannot tell any of these apart from noise.
-
-In hindsight this makes sense, because a bug report usually names the thing that is broken (an error message, a function, a flag), and searching for an exact name is the one thing grep has always been good at.
-
-<!-- fig:fresh -->
-```{=html}
-<figure class="fsfig" role="group" aria-label="Fresh GitHub issues"><p class="fsfig-title">Fresh GitHub issues</p><p class="fsfig-sub">Codex on 260 issues opened after the training cutoff, 26 projects. Share where the first file named is the one the fix changed.</p><svg class="fschart" viewBox="0 0 640 164" role="img" aria-label="Fresh GitHub issues"><line class="grid" x1="210.0" x2="210.0" y1="18" y2="142"/><text class="tick" x="210.0" y="162" text-anchor="middle">0%</text><line class="grid" x1="300.0" x2="300.0" y1="18" y2="142"/><text class="tick" x="300.0" y="162" text-anchor="middle">25%</text><line class="grid" x1="390.0" x2="390.0" y1="18" y2="142"/><text class="tick" x="390.0" y="162" text-anchor="middle">50%</text><line class="grid" x1="480.0" x2="480.0" y1="18" y2="142"/><text class="tick" x="480.0" y="162" text-anchor="middle">75%</text><line class="grid" x1="570.0" x2="570.0" y1="18" y2="142"/><text class="tick" x="570.0" y="162" text-anchor="middle">100%</text><g class="row"><title>Codex, grep only: 81.9% (213 of 260), 95% CI 77% to 87%</title><text class="lab base" x="200" y="44" text-anchor="end">grep only</text><rect class="bar base grow-x" x="210" y="30" width="294.9" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="486.9" x2="521.5" y1="39.0" y2="39.0"/><text class="val base" x="529.5" y="44">82%<tspan class="dl"></tspan></text></g><g class="row"><title>Codex, + semantic search tool: 82.7% (215 of 260), 95% CI 78% to 87%</title><text class="lab base" x="200" y="72" text-anchor="end">+ semantic search tool</text><rect class="bar base grow-x" x="210" y="58" width="297.7" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="489.7" x2="523.0" y1="67.0" y2="67.0"/><text class="val base" x="531.0" y="72">83%<tspan class="dl">  +1</tspan></text></g><g class="row"><title>Codex, + 5 similar files pushed: 84.2% (219 of 260), 95% CI 80% to 88%</title><text class="lab base" x="200" y="100" text-anchor="end">+ 5 similar files pushed</text><rect class="bar base grow-x" x="210" y="86" width="303.2" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="496.6" x2="528.5" y1="95.0" y2="95.0"/><text class="val base" x="536.5" y="100">84%<tspan class="dl">  +2</tspan></text></g><g class="row"><title>Codex, + commit-history hints: 82.3% (214 of 260), 95% CI 78% to 87%</title><text class="lab base" x="200" y="128" text-anchor="end">+ commit-history hints</text><rect class="bar base grow-x" x="210" y="114" width="296.3" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="489.7" x2="522.9" y1="123.0" y2="123.0"/><text class="val base" x="530.9" y="128">82%<tspan class="dl">  ±0</tspan></text></g></svg><p class="fsfig-note">Thin lines are 95% confidence intervals; all overlap. The semantic search tool was running in all 260 runs and called in none.</p></figure>
-```
-<!-- /fig:fresh -->
-
-## Remember
-
-Ask an agent what a piece of code looked like a year ago, and without version control it can only see today. So it answers with today's value, quite confidently, as if nothing had ever been different. That happened in 30 to 46% of answers. I started calling it **present bias**.
-
-With read-only access to git, every agent went from somewhere between 52 and 66% to somewhere between 92 and 100%. Haiku went from 58% to 98%, and Sonnet got every question right. For the Claude models it was also cheaper, because one `git show` replaces a long hunt for clues in the current files.
-
-<!-- fig:past -->
-```{=html}
-<figure class="fsfig" role="group" aria-label="Questions about past values"><p class="fsfig-title">Questions about past values</p><p class="fsfig-sub">100 questions about past states of real code from 14 Python projects. Share answered exactly right.</p><p class="fsfig-legend"><span><i class="sw base"></i>grep only (sees today)</span><span><i class="sw key"></i>grep + read-only git history</span></p><svg class="fschart" viewBox="0 0 640 282" role="img" aria-label="Questions about past values"><line class="grid" x1="150.0" x2="150.0" y1="20" y2="238"/><text class="tick" x="150.0" y="258" text-anchor="middle">40%</text><line class="grid" x1="290.0" x2="290.0" y1="20" y2="238"/><text class="tick" x="290.0" y="258" text-anchor="middle">60%</text><line class="grid" x1="430.0" x2="430.0" y1="20" y2="238"/><text class="tick" x="430.0" y="258" text-anchor="middle">80%</text><line class="grid" x1="570.0" x2="570.0" y1="20" y2="238"/><text class="tick" x="570.0" y="258" text-anchor="middle">100%</text><g class="row"><title>Claude Haiku: 58% without git, 98% with git (+40 points, 95% CI +30 to +49). Gave today&#x27;s value instead: 35% without git, 2% with git.</title><text class="lab" x="0" y="57">Claude Haiku</text><line class="link grow-x" x1="276.0" x2="556.0" y1="52" y2="52" style="transform-origin:276.0px 52px"/><circle class="dot base" cx="276.0" cy="52" r="6"/><circle class="dot key" cx="556.0" cy="52" r="7"/><text class="val" x="264.0" y="57" text-anchor="end">58%</text><text class="val key" x="569.0" y="57">98%</text><text class="delta" x="416.0" y="38" text-anchor="middle">+40 points</text><text class="aside" x="416.0" y="80" text-anchor="middle">gave today's value instead: 35% → 2%</text></g><g class="row"><title>Claude Sonnet: 66% without git, 100% with git (+34 points, 95% CI +25 to +43). Gave today&#x27;s value instead: 30% without git, 0% with git.</title><text class="lab" x="0" y="131">Claude Sonnet</text><line class="link grow-x" x1="332.0" x2="570.0" y1="126" y2="126" style="transform-origin:332.0px 126px"/><circle class="dot base" cx="332.0" cy="126" r="6"/><circle class="dot key" cx="570.0" cy="126" r="7"/><text class="val" x="320.0" y="131" text-anchor="end">66%</text><text class="val key" x="583.0" y="131">100%</text><text class="delta" x="451.0" y="112" text-anchor="middle">+34 points</text><text class="aside" x="451.0" y="154" text-anchor="middle">gave today's value instead: 30% → 0%</text></g><g class="row"><title>Codex: 52% without git, 92% with git (+40 points, 95% CI +28 to +51). Gave today&#x27;s value instead: 46% without git, 8% with git.</title><text class="lab" x="0" y="205">Codex</text><line class="link grow-x" x1="234.0" x2="514.0" y1="200" y2="200" style="transform-origin:234.0px 200px"/><circle class="dot base" cx="234.0" cy="200" r="6"/><circle class="dot key" cx="514.0" cy="200" r="7"/><text class="val" x="222.0" y="205" text-anchor="end">52%</text><text class="val key" x="527.0" y="205">92%</text><text class="delta" x="374.0" y="186" text-anchor="middle">+40 points</text><text class="aside" x="374.0" y="228" text-anchor="middle">gave today's value instead: 46% → 8%</text></g></svg></figure>
-```
-<!-- /fig:past -->
-
-## Focus
-
-A tree is only useful if you can find things in it, and for the web that is what Google worked out. PageRank looked at who links to whom. Later versions also looked at what people did with the results: which ones they clicked, and which ones they came straight back from to try another. From all of that Google produced an order.
-
-When I search for something, millions of other people have already done the ranking for me and I only read the results. An agent working in a folder has nothing comparable. It runs grep, gets back forty matches in no particular order, and then has to work out on its own which of them matter, so in effect the agent has to be its own Google.
-
-An agent run does leave records much like those clicks, namely which files it opened and which ones ended up in its answer. To see whether those records can rank a filesystem, I built three recommenders that sit outside the agent. Each reads the task, ranks the repository's files, and puts its top five into the prompt before the agent starts, the way a search engine shows you results before you click.
-
-| Recommender | How it ranks | Effect on accuracy |
-|---|---|---|
-| Embedding similarity | Files whose text most resembles the task | None; about 9% fewer tokens |
-| Commit history | Files changed by past commits with similar messages | None |
-| Earlier agents' traces | Files that earlier agents cited on similar tasks | Positive, when the problem has come up before |
-
-Every issue in the duplicates benchmark has an original report, and an earlier agent had already worked on that original. When the duplicate came in, I put the files that earlier agent had used at the top of the prompt. All three agents improved: Codex from 59% to 69%, Sonnet from 70% to 76%, Haiku from 65% to 69% (Haiku's gain is within the margin of error; the other two are not). The commit-history hints made no difference.
-
-<!-- fig:dups -->
-```{=html}
-<figure class="fsfig" role="group" aria-label="Duplicate issues"><p class="fsfig-title">Duplicate issues</p><p class="fsfig-sub">204 real duplicate issues from 26 projects. Share where the first file named is the one the real fix changed.</p><p class="fsfig-legend"><span><i class="sw base"></i>grep, alone or with commit-history hints</span><span><i class="sw key"></i>grep + earlier agents&#x27; traces</span></p><svg class="fschart" viewBox="0 0 640 424" role="img" aria-label="Duplicate issues"><line class="grid" x1="210.0" x2="210.0" y1="18" y2="402"/><text class="tick" x="210.0" y="422" text-anchor="middle">0%</text><line class="grid" x1="300.0" x2="300.0" y1="18" y2="402"/><text class="tick" x="300.0" y="422" text-anchor="middle">25%</text><line class="grid" x1="390.0" x2="390.0" y1="18" y2="402"/><text class="tick" x="390.0" y="422" text-anchor="middle">50%</text><line class="grid" x1="480.0" x2="480.0" y1="18" y2="402"/><text class="tick" x="480.0" y="422" text-anchor="middle">75%</text><line class="grid" x1="570.0" x2="570.0" y1="18" y2="402"/><text class="tick" x="570.0" y="422" text-anchor="middle">100%</text><text class="grp" x="0" y="34">Claude Haiku</text><g class="row"><title>Claude Haiku, grep only: 65.2% (133 of 204), 95% CI 59% to 72%</title><text class="lab base" x="200" y="66" text-anchor="end">grep only</text><rect class="bar base grow-x" x="210" y="52" width="234.7" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="421.8" x2="467.6" y1="61.0" y2="61.0"/><text class="val base" x="475.6" y="66">65%<tspan class="dl"></tspan></text></g><g class="row"><title>Claude Haiku, + commit-history hints: 67.6% (138 of 204), 95% CI 61% to 74%</title><text class="lab base" x="200" y="94" text-anchor="end">+ commit-history hints</text><rect class="bar base grow-x" x="210" y="80" width="243.5" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="430.6" x2="476.5" y1="89.0" y2="89.0"/><text class="val base" x="484.5" y="94">68%<tspan class="dl">  +2</tspan></text></g><g class="row"><title>Claude Haiku, + earlier agents&#x27; traces: 69.1% (141 of 204), 95% CI 63% to 75%</title><text class="lab key" x="200" y="122" text-anchor="end">+ earlier agents&#x27; traces</text><rect class="bar key grow-x" x="210" y="108" width="248.8" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="435.9" x2="481.8" y1="117.0" y2="117.0"/><text class="val key" x="489.8" y="122">69%<tspan class="dl">  +4</tspan></text></g><text class="grp" x="0" y="160">Claude Sonnet</text><g class="row"><title>Claude Sonnet, grep only: 69.6% (142 of 204), 95% CI 64% to 76%</title><text class="lab base" x="200" y="192" text-anchor="end">grep only</text><rect class="bar base grow-x" x="210" y="178" width="250.6" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="439.4" x2="483.5" y1="187.0" y2="187.0"/><text class="val base" x="491.5" y="192">70%<tspan class="dl"></tspan></text></g><g class="row"><title>Claude Sonnet, + commit-history hints: 70.6% (144 of 204), 95% CI 64% to 77%</title><text class="lab base" x="200" y="220" text-anchor="end">+ commit-history hints</text><rect class="bar base grow-x" x="210" y="206" width="254.1" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="441.2" x2="487.1" y1="215.0" y2="215.0"/><text class="val base" x="495.1" y="220">71%<tspan class="dl">  +1</tspan></text></g><g class="row"><title>Claude Sonnet, + earlier agents&#x27; traces: 76.0% (155 of 204), 95% CI 70% to 82%</title><text class="lab key" x="200" y="248" text-anchor="end">+ earlier agents&#x27; traces</text><rect class="bar key grow-x" x="210" y="234" width="273.5" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="462.4" x2="504.7" y1="243.0" y2="243.0"/><text class="val key" x="512.7" y="248">76%<tspan class="dl">  +6</tspan></text></g><text class="grp" x="0" y="286">Codex</text><g class="row"><title>Codex, grep only: 58.8% (120 of 204), 95% CI 52% to 66%</title><text class="lab base" x="200" y="318" text-anchor="end">grep only</text><rect class="bar base grow-x" x="210" y="304" width="211.8" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="397.1" x2="446.5" y1="313.0" y2="313.0"/><text class="val base" x="454.5" y="318">59%<tspan class="dl"></tspan></text></g><g class="row"><title>Codex, + commit-history hints: 58.8% (120 of 204), 95% CI 52% to 66%</title><text class="lab base" x="200" y="346" text-anchor="end">+ commit-history hints</text><rect class="bar base grow-x" x="210" y="332" width="211.8" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="397.1" x2="446.5" y1="341.0" y2="341.0"/><text class="val base" x="454.5" y="346">59%<tspan class="dl">  ±0</tspan></text></g><g class="row"><title>Codex, + earlier agents&#x27; traces: 68.6% (140 of 204), 95% CI 62% to 75%</title><text class="lab key" x="200" y="374" text-anchor="end">+ earlier agents&#x27; traces</text><rect class="bar key grow-x" x="210" y="360" width="247.1" height="18" rx="2" style="transform-origin:210px 0"/><line class="ci" x1="434.1" x2="480.0" y1="369.0" y2="369.0"/><text class="val key" x="488.0" y="374">69%<tspan class="dl">  +10</tspan></text></g></svg><p class="fsfig-note">Thin lines are 95% confidence intervals. Numbers after the value are points gained over grep only.</p></figure>
-```
-<!-- /fig:dups -->
-
-Scored on their own, before any agent reads them, the traces put the right file first for 40% of the duplicates. Commit history managed 10%.
-
-<!-- fig:rankers -->
-```{=html}
-<figure class="fsfig" role="group" aria-label="Ranking quality of each recommender"><p class="fsfig-title">Ranking quality of each recommender</p><p class="fsfig-sub">Scored directly against the files the real fix changed, before any agent sees the list.</p><p class="fsfig-legend"><span><i class="sw key"></i>right file ranked first</span><span><i class="sw soft"></i>right file anywhere in the top 5</span></p><svg class="fschart" viewBox="0 0 640 262" role="img" aria-label="Ranking quality of each recommender"><line class="grid" x1="210.0" x2="210.0" y1="18" y2="240"/><text class="tick" x="210.0" y="260" text-anchor="middle">0%</text><line class="grid" x1="300.0" x2="300.0" y1="18" y2="240"/><text class="tick" x="300.0" y="260" text-anchor="middle">25%</text><line class="grid" x1="390.0" x2="390.0" y1="18" y2="240"/><text class="tick" x="390.0" y="260" text-anchor="middle">50%</text><line class="grid" x1="480.0" x2="480.0" y1="18" y2="240"/><text class="tick" x="480.0" y="260" text-anchor="middle">75%</text><line class="grid" x1="570.0" x2="570.0" y1="18" y2="240"/><text class="tick" x="570.0" y="260" text-anchor="middle">100%</text><g class="row"><title>Embedding similarity (fresh issues): right file ranked first 23%, in the top 5 55%</title><text class="lab base" x="200" y="42" text-anchor="end">Embedding similarity</text><text class="aside" x="200" y="59" text-anchor="end">fresh issues</text><rect class="bar soft grow-x" x="210" y="30" width="198.0" height="30" rx="2" style="transform-origin:210px 0"/><rect class="bar key grow-x" x="210" y="30" width="81.7" height="30" rx="2" style="transform-origin:210px 0"/><text class="val base" x="285.7" y="50" text-anchor="end" style="fill:var(--color-paper);stroke:none;font-weight:600">23%</text><text class="val" x="416.0" y="50">55%</text></g><g class="row"><title>Commit history (fresh issues): right file ranked first 22%, in the top 5 46%</title><text class="lab base" x="200" y="96" text-anchor="end">Commit history</text><text class="aside" x="200" y="113" text-anchor="end">fresh issues</text><rect class="bar soft grow-x" x="210" y="84" width="164.9" height="30" rx="2" style="transform-origin:210px 0"/><rect class="bar key grow-x" x="210" y="84" width="80.3" height="30" rx="2" style="transform-origin:210px 0"/><text class="val base" x="284.3" y="104" text-anchor="end" style="fill:var(--color-paper);stroke:none;font-weight:600">22%</text><text class="val" x="382.9" y="104">46%</text></g><g class="row"><title>Commit history (duplicates): right file ranked first 10%, in the top 5 26%</title><text class="lab base" x="200" y="150" text-anchor="end">Commit history</text><text class="aside" x="200" y="167" text-anchor="end">duplicates</text><rect class="bar soft grow-x" x="210" y="138" width="91.8" height="30" rx="2" style="transform-origin:210px 0"/><rect class="bar key grow-x" x="210" y="138" width="37.1" height="30" rx="2" style="transform-origin:210px 0"/><text class="val base" x="241.1" y="158" text-anchor="end" style="fill:var(--color-paper);stroke:none;font-weight:600">10%</text><text class="val" x="309.8" y="158">26%</text></g><g class="row"><title>Earlier agents&#x27; traces (duplicates): right file ranked first 40%, in the top 5 65%</title><text class="lab key" x="200" y="204" text-anchor="end">Earlier agents&#x27; traces</text><text class="aside" x="200" y="221" text-anchor="end">duplicates</text><rect class="bar soft grow-x" x="210" y="192" width="232.9" height="30" rx="2" style="transform-origin:210px 0"/><rect class="bar key grow-x" x="210" y="192" width="144.7" height="30" rx="2" style="transform-origin:210px 0"/><text class="val key" x="348.7" y="212" text-anchor="end" style="fill:var(--color-paper);stroke:none;font-weight:600">40%</text><text class="val" x="450.9" y="212">65%</text></g></svg></figure>
-```
-<!-- /fig:rankers -->
-
-PageRank got better as the web grew, so I also replayed the ranking with only a share of the earlier traces available. Without any traces it cannot rank at all. With a quarter of them it puts the right file first 20% of the time, with half of them 31%, and with all of them 50%.
-
-<!-- fig:curve -->
-```{=html}
-<figure class="fsfig" role="group" aria-label="Ranking quality by amount of earlier work"><p class="fsfig-title">Ranking quality by amount of earlier work</p><p class="fsfig-sub">Replayed offline on 203 real duplicate issues.</p><p class="fsfig-legend"><span><i class="sw ln"></i>right file ranked first</span><span><i class="sw ln dash"></i>right file in the top 5</span></p><svg class="fschart" viewBox="0 0 640 328" role="img" aria-label="Ranking quality by amount of earlier work"><line class="grid" x1="56" x2="560" y1="270.0" y2="270.0"/><text class="tick" x="46" y="274.0" text-anchor="end">0%</text><line class="grid" x1="56" x2="560" y1="207.5" y2="207.5"/><text class="tick" x="46" y="211.5" text-anchor="end">25%</text><line class="grid" x1="56" x2="560" y1="145.0" y2="145.0"/><text class="tick" x="46" y="149.0" text-anchor="end">50%</text><line class="grid" x1="56" x2="560" y1="82.5" y2="82.5"/><text class="tick" x="46" y="86.5" text-anchor="end">75%</text><line class="grid" x1="56" x2="560" y1="20.0" y2="20.0"/><text class="tick" x="46" y="24.0" text-anchor="end">100%</text><text class="tick" x="56.0" y="292" text-anchor="middle">none</text><text class="tick" x="106.4" y="292" text-anchor="middle">10%</text><text class="tick" x="182.0" y="292" text-anchor="middle">25%</text><text class="tick" x="308.0" y="292" text-anchor="middle">50%</text><text class="tick" x="434.0" y="292" text-anchor="middle">75%</text><text class="tick" x="560.0" y="292" text-anchor="middle">all</text><text class="axis" x="308.0" y="316" text-anchor="middle">earlier work the ranking has seen</text><polygon class="area" points="56.0,270.0 106.4,244.1 182.0,219.0 308.0,192.7 434.0,169.8 560.0,144.4 560.0,270.0 56.0,270.0"/><polyline class="line soft draw" points="56.0,270.0 106.4,240.0 182.0,205.0 308.0,160.6 434.0,121.2 560.0,79.1"/><polyline class="line key draw" points="56.0,270.0 106.4,244.1 182.0,219.0 308.0,192.7 434.0,169.8 560.0,144.4"/><g class="row"><title>0% of earlier work: right file first 0%, in top 5 0%</title><circle class="dot soft" cx="56.0" cy="270.0" r="4"/><circle class="dot key" cx="56.0" cy="270.0" r="5"/></g><g class="row"><title>10% of earlier work: right file first 10%, in top 5 12%</title><circle class="dot soft" cx="106.4" cy="240.0" r="4"/><circle class="dot key" cx="106.4" cy="244.1" r="5"/></g><g class="row"><title>25% of earlier work: right file first 20%, in top 5 26%</title><circle class="dot soft" cx="182.0" cy="205.0" r="4"/><circle class="dot key" cx="182.0" cy="219.0" r="5"/></g><g class="row"><title>50% of earlier work: right file first 31%, in top 5 44%</title><circle class="dot soft" cx="308.0" cy="160.6" r="4"/><circle class="dot key" cx="308.0" cy="192.7" r="5"/></g><g class="row"><title>75% of earlier work: right file first 40%, in top 5 60%</title><circle class="dot soft" cx="434.0" cy="121.2" r="4"/><circle class="dot key" cx="434.0" cy="169.8" r="5"/></g><g class="row"><title>100% of earlier work: right file first 50%, in top 5 76%</title><circle class="dot soft" cx="560.0" cy="79.1" r="4"/><circle class="dot key" cx="560.0" cy="144.4" r="5"/></g><text class="val key" x="570.0" y="149.4">50%</text><text class="val" x="570.0" y="84.1">76%</text><line class="ref" x1="56" x2="560" y1="256.5" y2="256.5"/><text class="val" x="570.0" y="261.5">5%</text></svg><p class="fsfig-note">Dotted line: the same ranking given every earlier trace except the one from the original report of the same problem, 5%.</p></figure>
-```
-<!-- /fig:curve -->
-
-I expected the ranking to pick up general knowledge about a codebase, and it turned out that it does not. If I remove the trace of the one original problem and keep all the others, the right file comes first only 5% of the time. Problems do come back often, though: in these projects alone I found 465 fixed bugs that somebody had reported twice.
-
-I also expected that only successful visits should count, so the ranker weighted a file up when the earlier agent had been right and down when it had been wrong. When I tested that against simply counting every visit the same, there was no difference (57% either way).
-
-## Beyond Code
-
-A **digital twin** is a running model of some real system (a city's water and power, a forest, a factory) that is kept in step with the original so you can ask it questions and try things out.
-
-I built two small simulated worlds and stored each as a git repository. One is a city: five districts with populations and a satisfaction score, a reservoir filled by rain and drained by water use, and a power grid with a plant, some hydro power and a battery, so that hot weeks cause blackouts in whichever districts the council ranked last. The other is a forest reserve: five patches of vegetation, deer that graze and wander when food runs short, wolves that hunt them, and fires in hot dry weeks. Each world has a `state/` folder with one file per district or patch, a `policies.json` with the current decisions, and a `weather.csv` with the forecast. Every simulated week is a commit. So is every decision, with messages like "rationing set to level 3 in every district (drought emergency order)".
-
-### A perfect twin
-
-In the first version the agent got, in the best condition, the very simulator that had produced the world. I asked one kind of question per operation: remember a past value, say when something first happened, predict a future value, undo a past decision and say what would be true now, and choose between three interventions. Codex answered 152 of these across 40 worlds, with only the current files, then with git history added, then with a `./sim` command as well.
+I first generated 40 worlds, half of them cities and half of them forest reserves with vegetation, deer, wolves and fires, in which the simulator is exactly the program that produced the world. I asked Codex (gpt-5-mini) 152 questions, each of which needed one operation: recalling a past value, finding when something first happened, predicting a future value, undoing a past decision and reporting what would be true now, or choosing among three interventions. Each question was asked three times: with the current files only, with the git history added, and with the history and a `./sim` command.
 
 <!-- fig:twins -->
 ```{=html}
@@ -153,49 +81,72 @@ In the first version the agent got, in the best condition, the very simulator th
 ```
 <!-- /fig:twins -->
 
-Overall accuracy went from 13% to 63% to 97%, but I would not lean on those numbers. A snapshot cannot contain last month's reservoir level, and the simulator was the same program that had produced the world, so most of that staircase was guaranteed before I ran anything.
+Accuracy rose from 13% to 63% to 97%. Most of this increase follows from the setup, since a snapshot does not contain past values and an exact simulator predicts its own world.
 
-What was not guaranteed is how the agent went about the "what if" questions. Asked what would be true today had the council never ordered rationing in week 48, it checked out the world as it stood the week before, deleted the decision from `policies.json`, ran the simulator forward to the present and read off the answer. It did this in 26 of 32 cases, and nobody had told it how.
+The behaviour on the what-if questions does not follow from the setup. Asked what would be true today had the council not ordered rationing in week 48, the agent checked out the world as it was the week before, removed the decision from `policies.json`, ran the simulator forward to the present and reported the result. It did so in 26 of 32 such questions without being told how.
 
-### When the twin is wrong
+## When the twin is wrong
 
-Real twins are never perfect, so the second version makes the model and the world disagree. In each of 80 new worlds, reality runs the twin's equations with every parameter off by up to 6%, plus one thing the twin does not model at all. In the city that is a slow leak in the reservoir, households using more water than assumed, a power plant delivering less than its setting, or demand reacting harder to heat. In the forest it is a deer disease, poorer soil, unrecorded poaching, or wolves coming in from outside. The weather file holds what was observed up to now and only a forecast after that, and the real future differs from the forecast. Git records what really happened. The simulator's parameters sit in an editable `model/params.json`, set when the twin was created.
+A real twin does not match its asset, so in a second set of 80 worlds I made the simulator and the world disagree. Reality runs the simulator's equations with every parameter changed by up to 6% and adds one process that the simulator does not model. In the city this is a slow reservoir leak, higher household water use, a plant that delivers less than its setting, or demand that responds more strongly to heat; in the forest it is a deer disease, poorer soil, unrecorded poaching, or wolves arriving from outside. The weather file holds the observed weather up to the present and a forecast after it, and the real weather departs from the forecast. Git records what actually happened, and the simulator's parameters are stored in `model/params.json`.
 
-I also made the questions hard on purpose. A forecasting question was kept only if three lazy answers all failed: today's value, the recent trend carried forward, and whatever the twin says as shipped. It also had to be answerable by a twin with the true parameters.
+To keep the questions hard, I kept a forecasting question only if three simple answers were all wrong (the current value, the recent trend extended, and the shipped simulator's prediction) and a simulator with the true parameters got it right. I asked the 109 resulting questions of three agents: Codex on gpt-5-mini, Codex on gpt-6.2-sol, and Claude Code on Claude Opus 5.5.
 
-<!-- fig:ladder -->
-```{=html}
-<figure class="fsfig" role="group" aria-label="Forecasting with a miscalibrated twin"><p class="fsfig-title">Forecasting with a miscalibrated twin</p><p class="fsfig-sub">Codex on 80 worlds where reality differs from the twin. 109 forecasting questions (predict, predict when, counterfactual), each one chosen so that today&#x27;s value, the recorded trend and the shipped twin all give the wrong answer.</p><svg class="fschart" viewBox="0 0 640 252" role="img" aria-label="Forecasting with a miscalibrated twin"><line class="grid" x1="270.0" x2="270.0" y1="18" y2="230"/><text class="tick" x="270.0" y="250" text-anchor="middle">0%</text><line class="grid" x1="346.2" x2="346.2" y1="18" y2="230"/><text class="tick" x="346.2" y="250" text-anchor="middle">25%</text><line class="grid" x1="422.5" x2="422.5" y1="18" y2="230"/><text class="tick" x="422.5" y="250" text-anchor="middle">50%</text><line class="grid" x1="498.8" x2="498.8" y1="18" y2="230"/><text class="tick" x="498.8" y="250" text-anchor="middle">75%</text><line class="grid" x1="575.0" x2="575.0" y1="18" y2="230"/><text class="tick" x="575.0" y="250" text-anchor="middle">100%</text><g class="row"><title>Snapshot of the current files: 8% of 109 forecasting questions within tolerance</title><text class="lab " x="258" y="45" text-anchor="end">Snapshot of the current files</text><rect class="bar base grow-x" x="270" y="30" width="25.2" height="20" rx="2" style="transform-origin:270px 0"/><text class="val " x="303.2" y="45">8%</text></g><g class="row"><title>+ git history: 16% of 109 forecasting questions within tolerance</title><text class="lab " x="258" y="77" text-anchor="end">+ git history</text><rect class="bar base grow-x" x="270" y="62" width="47.6" height="20" rx="2" style="transform-origin:270px 0"/><text class="val " x="325.6" y="77">16%</text></g><g class="row"><title>+ twin simulator (miscalibrated): 0% of 109 forecasting questions within tolerance</title><text class="lab " x="258" y="109" text-anchor="end">+ twin simulator (miscalibrated)</text><rect class="bar base grow-x" x="270" y="94" width="2.0" height="20" rx="2" style="transform-origin:270px 0"/><text class="val " x="278.0" y="109">0%</text></g><g class="row"><title>+ a backtest command: 2% of 109 forecasting questions within tolerance</title><text class="lab " x="258" y="141" text-anchor="end">+ a backtest command</text><rect class="bar base grow-x" x="270" y="126" width="5.6" height="20" rx="2" style="transform-origin:270px 0"/><text class="val " x="283.6" y="141">2%</text></g><g class="row"><title>+ a written calibration procedure: 31% of 108 forecasting questions within tolerance</title><text class="lab key" x="258" y="173" text-anchor="end">+ a written calibration procedure</text><rect class="bar key grow-x" x="270" y="158" width="93.2" height="20" rx="2" style="transform-origin:270px 0"/><text class="val key" x="371.2" y="173">31%</text></g><g class="row"><title>Oracle: the true parameters: 94% of 109 forecasting questions within tolerance</title><text class="lab " x="258" y="205" text-anchor="end">Oracle: the true parameters</text><rect class="bar soft grow-x" x="270" y="190" width="288.2" height="20" rx="2" style="transform-origin:270px 0"/><text class="val " x="566.2" y="205">94%</text></g></svg><p class="fsfig-note">Correct means within 10% (values) or 3 steps (dates). The oracle shows how far a perfectly calibrated twin gets with only the forecast weather.</p></figure>
-```
-<!-- /fig:ladder -->
+| What the folder contains | gpt-5-mini | gpt-6.2-sol | Opus 5.5 |
+|---|---|---|---|
+| Current files only | 8% | 9% | 18% |
+| Current files and git history | 16% | 85% | 89% |
+| History, simulator and a `./sim backtest` command | 2% | 93% | 97% |
+| The same, plus one paragraph in `RULES.md` asking for calibration | 31% | 99% | 100% |
+| A simulator with the true parameters | 94% | 98% | 99% |
 
-With only the current files, Codex got 8% of these right. Git history brought it to 16%. Adding the twin's simulator took it to 0%, which sounds dramatic but is just the filter at work: every question was picked because the shipped twin gets it wrong, and the agents ran the twin and reported what it said.
+The backtest command replays the simulator over the recorded past and reports where it departs from the measurements. Given that command, gpt-5-mini ran it once in 109 questions and mostly reported what the uncorrected simulator predicted. Opus 5.5 ran it in all 109, and in 107 it went on to change the parameters until the replay matched the record. With the written procedure in `RULES.md` it recalibrated in all 109 and answered every question correctly. For gpt-5-mini the paragraph raised the recalibration rate from 22 of 192 runs to 94 of 189 and its accuracy to 31%. gpt-6.2-sol ran the backtest in 104 of 109 questions without being asked and in all 109 with the paragraph, and ended close to Opus 5.5 in every row. Both larger models did worst with history alone on questions about when something will first happen, 71% for gpt-6.2-sol and 81% for Opus 5.5.
 
-I then added a `./sim backtest` command that replays the twin over the recorded past and prints where it disagrees with what was measured. Accuracy stayed at 2%, because in 109 forecasting questions the agent ran the backtest once. It was not that the agent could not use the command, because when I asked directly which process the twin was missing, it backtested and picked the right one about half the time, twice what guessing would give.
+With only the history and no simulator, Opus 5.5 still answered 89% of the questions. In 107 of the 109 runs it read the description of the rules in `RULES.md`, extracted every recorded week from git, wrote its own simulator in Python, fitted that simulator's parameters to the record with a least-squares fit, and forecast with it. I checked the runs for leaks: none of them read anything outside its own folder. Measured in pairs on the same questions, the written procedure beat history alone by 11 points (95% confidence interval +6 to +17), and the backtest command alone beat history by 8 points (+3 to +15).
 
-After that I added a paragraph to the folder's `RULES.md`: before you simulate, backtest; if the replay does not match the record, fix the parameters and try again. With that paragraph, agents edited the parameters in 94 of 189 runs (it had been 22 of 192), and forecasting accuracy rose to 31%. In the runs where the agent did recalibrate it was right 44% of the time, compared with 10% in the runs where it did not.
+## A real reservoir
 
-A twin with the true parameters gets 94%, so an agent calibrating a twin from its history is still a long way behind one that is already calibrated.
+The simulated worlds follow rules that I wrote, and the simulator always has the right form. To see how far this carries to a real asset, I built the same kind of folder for eight large reservoirs in California (Folsom, Oroville, Shasta, New Melones, Don Pedro, New Bullards Bar, Pine Flat and Trinity), using the daily storage, inflow and release that the California Data Exchange Center publishes. For each of 96 dates between January 2025 and October 2026, the folder holds the reservoir as it was on that date: two years of daily readings as one commit per day, a separate commit whenever the release changed by more than a quarter, the operators' release plan for the next 14 days, and, in one condition, a water-balance simulator whose inflow assumption is a parameter. The question is what the storage will be 14 days later. The release plan is given; the inflow is not, and depends on rain, snowmelt and upstream operations.
 
-## What Agents Actually Use
+| 14-day storage forecast, 96 dates | Median error |
+|---|---|
+| Storage unchanged | 45,600 acre-feet |
+| Inflow held at today's value | 12,600 |
+| Inflow as in the same weeks last year | 14,400 |
+| Opus 5.5, current files only | 9,100 |
+| Opus 5.5, with git history | 8,200 |
+| Opus 5.5, with history, simulator and procedure | 7,500 |
+| Balance with the true future inflow (the best possible with this model) | 1,200 |
 
-Across all of these experiments, agents acted on what was put directly in front of them, in the prompt or in the folder's own documentation, and mostly left alone anything that was only available as an option.
+The agent beat every simple forecast, but the history and the simulator did little for it. Measured on the same dates, history lowered the median error by 400 acre-feet (95% confidence interval from 1,300 lower to 500 higher), and the simulator with its procedure by another 200, both within the noise. In the runs with history, the agent looked at the same season in earlier years in only 3 of 96 cases and otherwise worked from the last few weeks. On a real asset, the part of the future that matters here is the weather, and two years of the reservoir's own readings say little about it.
 
-- A semantic search tool was installed and running in all 260 of Codex's runs on fresh issues. It was called zero times.
-- In an earlier pilot I offered Claude the trace-based recommendations as an optional tool. It was called in 1 to 4% of runs. The same recommendations pasted into the prompt were read and used.
-- The backtest command was run in 1 of 109 forecasting questions. Once the folder's own rules file said to run it, calibration happened in half the runs.
-- The simulator, which was described in that same rules file from the start, got used whenever a question called for it.
+## Git or a memory system?
 
-I had been treating tools as the way to give an agent a capability. Going by these results, the documentation inside the folder does more of that work than the tools do.
+Git is not the only way to keep a history. To compare it with memory systems built for agents, I fed the same stream of changes, one record per commit, into two stores for each of the 40 perfect-twin worlds: a vector store that keeps every record verbatim and retrieves by similarity, and mem0, which extracts facts from each record and updates them as new records arrive. The agent (Opus 5.5) got the current files and a `./memory search` command in place of the git history, and answered the 70 questions about the past: recalling a past value and finding when something first happened.
 
-## Conclusion
+All three answered all 70 correctly, so I wrote 137 harder questions for the same worlds: which value a policy had during a past step, in how many steps of a 20-step window a quantity went up, at which step of a window it peaked, and what a quantity would be today had a past decision not been made. The last kind needs the exact state at the time of the decision, fed into the simulator. All three conditions had the simulator, and the memory conditions also had `./memory all`, which lists every entry the way mem0's own API does. Git, the vector store and mem0 again answered every question correctly. The agents with a memory store listed all of it in every run, and since each world has 67 steps, it fit in context. mem0 had stored the full state of each step together with the step number, so the agent could rebuild the files from text and run the simulator from them.
 
-If you run agents on code, let them read version history; it is the cheapest world model there is and it is already in the repository. Keep a record of which files each run used, because that record ranks the folder better the more it is used. And put what the agent should know into its prompt or into the folder's own documentation instead of offering it as an optional tool.
+Accuracy therefore does not decide between them, and the cost of getting there does. When the state of a world is kept as files in git, the history is written by every commit and needs nothing else. The memory stores needed a pipeline of their own: a language model call to extract facts from every record, an embedding model, a vector database, and a search command for the agent. The agent with git also spent less per question, $0.068 and 75,000 input tokens on average, against $0.107 and 120,000 for the vector store and $0.119 and 121,000 for mem0, because it read the commits it needed instead of the whole store. For a world kept in a folder, an agent does not need a separate memory system.
 
-If you want agents to work on a city, a supply chain, a power grid or an ecosystem, I would start by writing its state to files, committing every step and every decision, shipping the simulator and its parameters in the same folder, and writing the procedures down in that folder too.
+## What agents actually use
 
-Such a folder still has no built-in focus, though the traces of earlier agents supply some of it for problems that come back. It also cannot supply the judgement about when to distrust the model, and there the gap is wide: 31% for an agent that calibrates, 94% for a twin that is already right. That gap is what I would work on next.
+With gpt-5-mini, the agents acted on what was placed in front of them and left alone what was only available: a backtest command that was run in 1 of 109 questions, a semantic search tool that was installed in 260 runs on real GitHub issues and called in none, and recommendations offered as a tool that were called in 1 to 4% of runs. Opus 5.5 explored the folder on its own, ran the backtest every time it was available, and wrote a simulator when none was provided. Written procedures in the folder helped both models, but they mattered much more for the smaller one.
 
----
+## And on code
 
-*Measurement: 4,076 runs of Claude Code (Claude Haiku 5.5, Claude Sonnet 5.5) and Codex (gpt-5-mini) on real code, plus 454 Codex runs on 40 idealized and about 1,150 on 80 realistic simulated worlds, all in isolated sandboxes, with paired comparisons and 95% confidence intervals over tasks. On duplicates, the gain from earlier agents' traces is clear for Codex (+9.8 points, CI +4 to +15) and Sonnet (+6.4, CI +2 to +11) and borderline for Haiku (+3.9, CI −0.5 to +8). On the realistic twins, the written procedure beats the backtest command alone by 29 points (CI +19 to +38) and history alone by 15 (CI +5 to +25). The Anthropic credit ran out partway through, so the fresh-issues benchmark and both twin studies have Codex only. The simulated worlds are ones I wrote, and the realistic questions were filtered to be hard, so those percentages describe hard cases.*
+I started with code because a repository is already a world stored in a folder, and ran three benchmarks on public GitHub projects. Two results carry over to twins.
+
+An agent without access to history does not say that it cannot know the past. Asked about earlier values, it gave the current value in 30 to 46% of answers, and in 0 to 8% once it could read the history.
+
+When the same bug had been reported twice, showing the agent the files that an earlier agent had used on the first report raised accuracy by 4 to 10 points, whereas embeddings and commit-message search did no better than grep. Problems with physical assets also recur, so a record of what earlier runs consulted is worth keeping in the folder.
+
+## Further work
+
+Three directions look most interesting to me next.
+
+The first is other questions about a real asset. The reservoir study asked for a two-week storage forecast, where the weather decides most of the answer. Questions such as what led up to an alarm, or what a different release schedule would have done, lean more on the history and on running the simulator from an earlier state.
+
+The second is long histories. The simulated worlds have 67 steps, few enough for an agent to read every record. A plant that logs every minute for years cannot be read in one go, and comparing git's exact addressing with similarity search at that scale is the natural next test for the memory question.
+
+The third is simulators with the wrong equations. In my worlds the simulator always had the right form and only its numbers were off. For a real asset the equations are also partly wrong, and I would like to see whether an agent can find and rewrite the part of the model that does not fit the record.
+
+*Measurement: all runs in isolated E2B sandboxes. Simulated worlds: 454 Codex (gpt-5-mini) runs on 40 idealized worlds and about 1,150 on 80 realistic ones; 545 Claude Code (Claude Opus 5.5) runs and 545 Codex (gpt-6.2-sol) runs on the 109 realistic forecasting questions. Memory comparison: 621 Opus 5.5 runs, with stores built from the same commits using text-embedding-3-small and mem0 (gpt-4.1-mini for extraction). Reservoirs: 287 Opus 5.5 runs on 96 dates from CDEC data, January 2025 to October 2026; one run returned no answer. Code: 4,076 runs of Claude Code (Claude Haiku 5.5, Claude Sonnet 5.5) and Codex on real GitHub repositories. Confidence intervals are 95% intervals from a paired bootstrap over questions. The realistic forecasting questions were filtered to be hard, so those percentages describe hard cases.*
